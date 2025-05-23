@@ -223,7 +223,7 @@ def descargar_pdf(nombre):
 
 @app.route('/descargar/xml/<nombre>')
 def descargar_xml(nombre):
-    return send_file(os.path.join(OUTPUT_FOLDER, nombre), as_attachment=True)
+    return send_file(os.path.join(OUTPUT_FOLDER, nombre), as_attsachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
