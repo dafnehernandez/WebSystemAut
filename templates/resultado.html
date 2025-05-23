@@ -21,7 +21,7 @@
 
       <div class="d-grid gap-2 col-6 mx-auto mt-4">
         <a href="{{ url_for('descargar_pdf', nombre=nombre + '.pdf') }}" class="btn btn-outline-success">📄 Descargar PDF</a>
-        <a href="{{ url_for('descargar_xml', nombre=nombre + '.xml') }}" class="btn btn-outline-info">📄 Descargar XML</a>
+        <a href="{{ url_for('descargar_xml', nombre=nombre) }}" class="btn btn-outline-secondary">📄 Descargar XML</a>
         <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">🔁 Generar otro reporte</a>
       </div>
     </div>

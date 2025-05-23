@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, send_file
 import os
+from flask import Flask, request, render_template, send_file, session, redirect, url_for
 from reportlab.pdfgen import canvas
 import xml.etree.ElementTree as ET
 from werkzeug.utils import secure_filename
@@ -14,6 +15,8 @@ UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'outputs'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+app.secret_key = 'clave_secreta_para_sesion'  # Necesario para usar session
 
 @app.route('/')
 def index():
@@ -205,6 +208,10 @@ def upload():
         flow.append(Paragraph("<b>Test Completion Status</b>", styles['Heading2']))
         flow.append(Paragraph(estado_detectado, styles['Normal']))
 
+        # Guardar opciones seleccionadas en sesión
+        session['tipo_reporte'] = tipo_reporte
+        session['secciones'] = secciones
+
         doc.build(flow)
         return render_template('resultado.html', nombre=nombre)
 
@@ -214,7 +221,79 @@ def descargar_pdf(nombre):
 
 @app.route('/descargar/xml/<nombre>')
 def descargar_xml(nombre):
-    return send_file(os.path.join(OUTPUT_FOLDER, nombre), as_attachment=True)
+    ruta = os.path.join(UPLOAD_FOLDER, nombre)
+    if not os.path.exists(ruta):
+        return "Archivo original no encontrado", 404
+
+    tipo_reporte = session.get('tipo_reporte', 'detallado')
+    secciones = session.get('secciones', [])
+
+    with open(ruta, 'r', encoding='utf-8') as f:
+        contenido = f.readlines()
+
+    incluir = lambda campo: tipo_reporte == "detallado" or campo in secciones
+
+    root = ET.Element("reporte")
+    ET.SubElement(root, "archivo").text = nombre
+
+    if incluir("lineas"):
+        ET.SubElement(root, "total_lineas").text = str(len(contenido))
+
+    if incluir("path"):
+        for line in contenido:
+            if "Logs collected and stored at" in line and "/var/" in line:
+                path = line[line.index("/var/"):].strip()
+                ET.SubElement(root, "path_archivo").text = path
+                break
+
+    if incluir("instalados"):
+        instalados = []
+        abiertos = []
+        for line in contenido:
+            if "INSTALL" in line:
+                partes = line.split()
+                if "INSTALL" in partes:
+                    idx = partes.index("INSTALL")
+                    if idx > 0:
+                        instalados.append(partes[idx - 1])
+            if "OPEN" in line:
+                partes = line.split()
+                if "OPEN" in partes:
+                    idx = partes.index("OPEN")
+                    if idx < len(partes) - 1:
+                        abiertos.append(partes[idx + 1])
+        ET.SubElement(root, "programas_instalados").text = ", ".join(instalados) if instalados else "-"
+        ET.SubElement(root, "programas_abiertos").text = ", ".join(abiertos) if abiertos else "-"
+
+    if incluir("netdata"):
+        netdata = ET.SubElement(root, "netdata")
+        netdata_activa = False
+        for line in contenido:
+            line = line.strip()
+            if "=== NETDATA ===" in line:
+                netdata_activa = True
+                continue
+            if netdata_activa:
+                if line == "" or "=" not in line:
+                    break
+                try:
+                    k, v = line.split("=", 1)
+                    metrica = ET.SubElement(netdata, "metrica", nombre=k.strip())
+                    metrica.text = v.strip()
+                except ValueError:
+                    continue
+
+    # Test completion status siempre se incluye
+    estados = ['SUCCESS', 'FAILED', 'STUCK']
+    estado = next((e for e in estados if any(e in l for l in contenido)), "No detectado")
+    ET.SubElement(root, "estado_final").text = estado
+
+    # Guardar XML
+    xml_path = os.path.join(OUTPUT_FOLDER, nombre + ".xml")
+    tree = ET.ElementTree(root)
+    tree.write(xml_path, encoding='utf-8', xml_declaration=True)
+
+    return send_file(xml_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
