@@ -129,6 +129,7 @@ def upload():
         flow.append(Paragraph("<b>Reporte detallado</b>", styles['Title']))
         flow.append(Spacer(1, 12))
 
+        mostrar_basico = tipo_reporte == "especifico" and len(secciones) == 0
         incluir = lambda campo: tipo_reporte == "detallado" or campo in secciones
 
         # Información General
@@ -143,8 +144,8 @@ def upload():
             flow.append(Paragraph(f"<b>Programas abiertos:</b> {abiertos_str}", styles['Normal']))
         flow.append(Spacer(1, 12))
 
-        # Secciones para reporte detallado únicamente
-        if tipo_reporte == "detallado":
+        # Secciones mínimas siempre presentes
+        if tipo_reporte == "detallado" or tipo_reporte == "especifico":
             flow.append(Paragraph("<b>Resumen de ocurrencias por palabra clave</b>", styles['Heading2']))
             contador = Counter([r['clave'] for r in resultados])
             tabla_resumen = Table([["Palabra clave", "Ocurrencias"]] + [[k, str(v)] for k, v in contador.items()])
@@ -185,6 +186,7 @@ def upload():
             else:
                 flow.append(Paragraph("No se detectaron anomalías en el archivo.", styles['Normal']))
             flow.append(Spacer(1, 12))
+
 
         # Sección Netdata
         if incluir("netdata"):
