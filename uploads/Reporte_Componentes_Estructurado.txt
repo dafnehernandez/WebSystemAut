@@ -1,0 +1,126 @@
+
+
+=======================================================================================================================================================================================================
+Title                                                                                                  Test 1 - TimeMemory
+Description                                                                                            Check how quickly memory is accessed
+
+Details                                                                                                os_version=Ubuntu 20.04; ifwi_version=1.0.3; kernel_version=5.15.0-92-generic; bios_version=1.3.7; vm_config=H1; bmc=2.10.4; memory=High; size=1.2GB; time=45s
+Test_cycle                                                                                             Regression_Test_June_2024
+
+Os_version                                                                                             Ubuntu 20.04
+Processor											       Xeon 4 SPR
+Ifwi_version                                                                                           1.0.3
+Kernel_version                                                                                         5.15.0-92-generic
+Bios_version                                                                                           1.3.7
+Release Date				 							       2023-11-15
+Model												       Dell PowerEdge R760
+Vm_config                                                                                              H1
+BMC                                                                                                    2.10.4
+
+Average latency observed: 382ns | Max latency spike: 476ns
+
+
+||||||||     ||      ||   ||||||||||
+||     ||    |||    |||   ||        
+||     ||    ||||  ||||   ||        
+|||||||||    || |||| ||   ||   
+||     ||    ||  ||  ||   ||      
+||     ||    ||      ||   ||      
+||||||||     ||      ||   ||||||||| 
+
+
+
+Architecture:           x86_64
+CPU op-mode(s):         32-bit, 64-bit
+Address sizes:          46 bits physical, 48 bits virtual
+Byte Order:             Little Endian
+CPU(s):                 64
+On-line CPU(s) list:    0-63
+Thread(s) per core:     2
+Core(s) per socket:     16
+Socket(s):              2
+NUMA node(s):           2
+Vendor ID:              GenuineIntel
+CPU family:             6
+Model:                  143
+Model name:             Intel(R) Xeon(R) Gold 6430 CPU @ 2.10GHz
+Stepping:               8
+CPU MHz:                2100.000
+CPU max MHz:            3300.0000
+CPU min MHz:            800.0000
+BogoMIPS:               4200.00
+Virtualization:         VT-x
+L1d cache:              48K
+L1i cache:              32K
+L2 cache:               1.25M
+L3 cache:               37.5M
+NUMA node0 CPU(s):      0-31
+NUMA node1 CPU(s):      32-63
+Flags:                  fpu vme de pse tsc ... (se omiten por brevedad)
+
+
+
+
+=====================================================================
+WARNINGS                                                                                               High memory access latency was detected during the stress test, potentially impacting real-time performance. Investigation required to determine root cause.
+
+Test 1 Complete -  MEMORY ACCESS LATENCY: Detected delay spikes exceeding 450ns under load
+
+Test Completion Status: FAILED
+
+=====================================================================
+
+Logs collected and stored at /var/log/memlat/failed_latency_test_1623900021
+
+
+
+
+
+
+
+
+
+=====================================================================
+WARNINGS                                                                                               overheating detected
+
+Test 1 Complete -  OVERHEATING: System temperature exceeded the safe operational threshold
+
+Test Completion Status: FAILED
+
+=====================================================================
+
+Copying log files result.log and clstrmgr.debug from all nodes to directory /var/log/stressng/failed.1144942311
+
+
+https://phoenixnap.com/kb/linux-cpu-temp
+
+
+
+
+Report_Component                                                                                      Description
+------------------------------------------------------------------------------------------------------ ----------------------------------------------------------------------------------------
+
+Title                                                                                                 Informe de Validación QA - 2024-06-05
+Id                                                                                                    QA_LOG_20240605_002
+Description                                                                                           success memory throughput
+
+Parent_Id                                                                                             BATCH_TEST_202406
+Owner                                                                                                 d.herrera
+Status                                                                                                Close
+Reason                                                                                                success
+Status_reason                                                                                         close.success
+Co_owners                                                                                             m.robles
+Owner_team                                                                                            QA_Automation_Equipo_2
+Details                                                                                               os_version=Ubuntu 22.04; ifwi_version=1.1.0; kernel_version=5.15.0-102-generic; bios_version=FX506LI.315; vm_config=FX506LI-QA2; bmc=03.00.12; memory=Nominal; size=1.1GB; time=37s
+Test_cycle                                                                                            Regression_Test_June_2024
+Free_tag_1                                                                                            CASE_10933
+Free_tag_2                                                                                            -
+
+Os_version                                                                                            Ubuntu 22.04
+Ifwi_version                                                                                           1.1.0
+Kernel_version                                                                                         5.15.0-102-generic
+Bios_version                                                                                           FX506LI.315
+Vm_config                                                                                              FX506LI-QA2
+BMC                                                                                                    3.1.12
+
+Alertas                                                                                               No se detectaron anomalías durante la ejecución

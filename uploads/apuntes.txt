@@ -1,0 +1,54 @@
+existe una forma de crear un archivo compilado para que el usuario no pueda acceder al código como tal. ---> poniendo como argumento -c al compilarlo 
+
+
+persona: color edficio: bebida : marca de cigarros: perro
+tapatio : rojo
+jarocho 					   : pastor alemán
+yucateco		té
+poblano primer edifici - junto al azul***
+regio				viceroy
+
+poblano aqui* ----- azul ******
+
+edificio verde * edificio blanco ROJO azul amarillo
+café
+
+
+*amarillo   - beagle
+marloboro
+
+
+jarocho FUERA - rojo
+
+el yucateco no es dueño de la casa verde porque toma té, su casa tampoco es rojo porque esa es la del tapatío (azul, amarillo, blanco)
+
+el edificio del centro toma teche - no es el yucateco, ni tapatío 
+jarocho, regio, poblano
+
+
+poblano (ni azul, ni rojo)
+
+-poblano *Empezamos con la primera casa* - Enunciado 9
+-leche
+-azul
+-lista negra
+-verde y blanco
+-cafe
+-tapatio y rojo, el unico con color que no tiene nacionalidad -7
+-amarilla *por descarte, no hay colores *
+-beagle
+-marloboro
+-camel
+-agua
+-cerveza
+-raleight 
+-yucateco y té
+-viceroy y regio
+-faros y labrador
+-bulldog (porque va junto al de camel)
+-pastor aleman y jarocho (por decarte)
+-poodle
+
+
+
+

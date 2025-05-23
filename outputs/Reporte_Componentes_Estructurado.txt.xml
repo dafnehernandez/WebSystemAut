@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<reporte><entrada><clave>WARNING</clave><contenido>WARNINGS                                                                                               High memory access latency was detected during the stress test, potentially impacting real-time performance. Investigation required to determine root cause.</contenido></entrada><entrada><clave>WARNING</clave><contenido>WARNINGS                                                                                               overheating detected</contenido></entrada></reporte>
