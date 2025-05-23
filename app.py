@@ -3,12 +3,18 @@ import os
 from reportlab.pdfgen import canvas
 import xml.etree.ElementTree as ET
 from werkzeug.utils import secure_filename
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from collections import Counter
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'outputs'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
 
 @app.route('/')
 def index():
@@ -40,6 +46,45 @@ def upload():
             c.drawString(50, y, f"[{r['clave']}] {r['linea']}")
             y -= 15
         c.save()
+
+        pdf_path = os.path.join(OUTPUT_FOLDER, nombre + '.pdf')
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+        styles = getSampleStyleSheet()
+        flow = []
+
+        # Título
+        flow.append(Paragraph(f"<b>Reporte de Análisis de Log</b>", styles['Title']))
+        flow.append(Spacer(1, 12))
+
+        # Información general
+        flow.append(Paragraph(f"<b>Archivo procesado:</b> {nombre}", styles['Normal']))
+        flow.append(Paragraph(f"<b>Total de líneas analizadas:</b> {len(contenido)}", styles['Normal']))
+        flow.append(Spacer(1, 12))
+
+        # Contar ocurrencias
+        contador = Counter([r['clave'] for r in resultados])
+
+        # Tabla resumen
+        flow.append(Paragraph("<b>Resumen de ocurrencias por palabra clave:</b>", styles['Heading2']))
+        tabla = Table([["Palabra clave", "Ocurrencias"]] + [[k, str(v)] for k, v in contador.items()])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold')
+        ]))
+        flow.append(tabla)
+        flow.append(Spacer(1, 12))
+
+        # Detalles línea por línea
+        flow.append(Paragraph("<b>Detalles de coincidencias encontradas:</b>", styles['Heading2']))
+        for r in resultados:
+            line = f"[{r['clave']}] {r['linea']}"
+            flow.append(Paragraph(line, styles['Normal']))
+            flow.append(Spacer(1, 6))
+
+        doc.build(flow)
 
         root = ET.Element("reporte")
         for r in resultados:
