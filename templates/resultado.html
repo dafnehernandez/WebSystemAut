@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte generado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
+</head>
+<body class="bg-light">
+
+  <div class="container mt-5 text-center">
+    <h1 class="text-primary">✅ Procesado con éxito</h1>
+    <p class="text-muted">Tu archivo ha sido analizado correctamente.</p>
+
+    <div class="d-grid gap-2 col-6 mx-auto mt-4">
+      <a href="{{ url_for('descargar_pdf', nombre=nombre + '.pdf') }}" class="btn btn-outline-success">📄 Descargar PDF</a>
+      <a href="{{ url_for('descargar_xml', nombre=nombre + '.xml') }}" class="btn btn-outline-info">📄 Descargar XML</a>
+      <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">🔁 Generar otro reporte</a>
+    </div>
+  </div>
+
+</body>
+</html>

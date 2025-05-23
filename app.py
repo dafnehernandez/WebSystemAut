@@ -49,11 +49,7 @@ def upload():
         xml_path = os.path.join(OUTPUT_FOLDER, nombre + '.xml')
         ET.ElementTree(root).write(xml_path, encoding='utf-8', xml_declaration=True)
 
-        return f"""
-        <p>Procesado con éxito</p>
-        <a href="/descargar/pdf/{nombre}.pdf">Descargar PDF</a><br>
-        <a href="/descargar/xml/{nombre}.xml">Descargar XML</a>
-        """
+        return render_template('resultado.html', nombre=nombre)
 
 @app.route('/descargar/pdf/<nombre>')
 def descargar_pdf(nombre):
