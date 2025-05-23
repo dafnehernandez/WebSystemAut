@@ -8,6 +8,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import KeepTogether
+from reportlab.platypus import PageBreak
 from collections import Counter
 
 app = Flask(__name__)
@@ -63,6 +65,32 @@ def upload():
                 if "/var/" in line:
                     path_line = line[line.index("/var/"):].strip()
 
+        # Programas instalados
+        programas = []
+        for line in contenido:
+            if "INSTALL" in line:
+                partes = line.split()
+                if "INSTALL" in partes:
+                    idx = partes.index("INSTALL")
+                    if idx > 0:
+                        programas.append(partes[idx - 1])
+        prog_str = ", ".join(programas) if programas else "-"
+
+        programas_abiertos = []
+        for line in contenido:
+            if "OPEN" in line:
+                partes = line.split()
+                if "OPEN" in partes:
+                    idx = partes.index("OPEN")
+                    if idx < len(partes) - 1:
+                        programas_abiertos.append(partes[idx + 1])
+        abiertos_str = ", ".join(programas_abiertos) if programas_abiertos else "-"
+
+        # Estados finales
+        estados = ['SUCCESS', 'FAILED', 'STUCK']
+        estado_detectado = next((e for e in estados if any(e in line for line in contenido)), "No detectado")
+
+        # Palabras clave
         alias_claves = {
             "os_version": ["os_version", "osversion"],
             "ifwi_version": ["ifwi_version", "ifwiversion"],
@@ -89,6 +117,7 @@ def upload():
                     resultados.append({'clave': clave, 'linea': linea.strip()})
                     break
 
+        # PDF Gen
         pdf_path = os.path.join(OUTPUT_FOLDER, nombre + '.pdf')
         doc = SimpleDocTemplate(pdf_path, pagesize=A4)
         styles = getSampleStyleSheet()
@@ -102,6 +131,8 @@ def upload():
         flow.append(Paragraph(f"<b>Total de líneas analizadas:</b> {len(contenido)}", styles['Normal']))
         if path_line != "-":
             flow.append(Paragraph(f"<b>Path del archivo:</b> {path_line}", styles['Normal']))
+            flow.append(Paragraph(f"<b>Program installed:</b> {prog_str}", styles['Normal']))
+            flow.append(Paragraph(f"<b>Programas abiertos:</b> {abiertos_str}", styles['Normal']))
         flow.append(Spacer(1, 12))
 
         flow.append(Paragraph("<b>Resumen de ocurrencias por palabra clave</b>", styles['Heading2']))
@@ -144,18 +175,34 @@ def upload():
         else:
             flow.append(Paragraph("No se detectaron anomalías en el archivo.", styles['Normal']))
         flow.append(Spacer(1, 12))
-        
-        flow.append(Paragraph("<b>Métricas con Netdata</b>", styles['Heading2']))
+
         if netdata_metrica:
+            netdata_title = Paragraph("<b>Métricas con Netdata</b>", styles['Heading2'])
             netdata_tabla = Table([["Métrica", "Valor"]] + netdata_metrica)
             netdata_tabla.setStyle(TableStyle([
                 ('BACKGROUND', (0,0), (-1,0), colors.darkblue),
                 ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
                 ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+                ('ALIGN', (0,0), (-1,-1), 'LEFT')
             ]))
+
+            flow.append(PageBreak())  # forzando 
+            flow.append(netdata_title)
+            flow.append(Spacer(1, 6))
             flow.append(netdata_tabla)
+
         else:
+            flow.append(Paragraph("<b>Métricas con Netdata</b>", styles['Heading2']))
             flow.append(Paragraph("No se encontraron métricas Netdata en el archivo.", styles['Normal']))
+
+        #Status Test
+        flow.append(Spacer(1, 12))
+        flow.append(Paragraph("<b>Test Completion Status</b>", styles['Heading2']))
+
+        # Buscar estado en contenido
+        estados = ['SUCCESS', 'FAILED', 'STUCK']
+        estado_detectado = next((e for e in estados if any(e in line for line in contenido)), "No detectado")
+        flow.append(Paragraph(estado_detectado, styles['Normal']))
 
         doc.build(flow)
 

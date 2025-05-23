@@ -57,9 +57,106 @@ L3 cache:               37.5M
 NUMA node0 CPU(s):      0-31
 NUMA node1 CPU(s):      32-63
 Flags:                  fpu vme de pse tsc ... (se omiten por brevedad)
+=====================================================================
 
+=== OPEN stressng ===
+
+$ sudo apt install stress-ng -y
+
+Leyendo listas de paquetes... Hecho
+Construyendo árbol de dependencias       
+Leyendo la información de estado... Hecho
+Se instalarán los siguientes paquetes:
+  stress-ng
+
+Instalando stress-ng...
+
+$ stress-ng --cpu 4 --timeout 30s --metrics-brief
+stress-ng: info:  [16785] dispatching hogs: 4 cpu
+stress-ng: info:  [16785] successful run completed in 30.00s
+stress-ng: info:  [16785] stressor    bogo-ops real-time usr-time sys-time   bogo-ops/s
+stress-ng: info:  [16785] cpu          1320112   30.01s    118.12s     0.03s     43977.0
+stress-ng: info:  [16785] cpu          1319462   30.00s    117.98s     0.03s     43981.0
+stress-ng: info:  [16785] cpu          1318810   30.00s    117.83s     0.03s     43977.0
+stress-ng: info:  [16785] cpu          1317904   30.00s    117.63s     0.03s     43978.0
+stress-ng: info:  [16785] 
+stress-ng: info:  [16785] System achieved 527937 bogo ops
+
+##############################################
+# Prueba de carga de CPU completa durante 30s
+# 4 hilos usados
+##############################################
+
+=====================================================================
+
+# FOR ALL TEST PLS WAIT & CHECK
+# SET ENVIROMENT VARIABLES AND PROXIES
+ENV http_proxy=http://proxy-chain.com:911
+ENV
+NO_PROXY=int.com,.int.com,.*.int.com,10.0.0.0/8,192.168.0.0/16,localhost,.local,127.0.0.0/8,134.134.0.0/16
+
+=====================================================================
+=== DOCKER INSTALL ===
+
+##############################################
+# Instalación en Ubuntu 20.04 desde bash
+# Usuario: root 
+##############################################
+
+#INSTALACIÓN DE DOCKER
+
+$ sudo apt update
+Obteniendo:1 http://security.ubuntu.com/ubuntu focal-security InRelease [114 kB]
+Obteniendo:2 http://archive.ubuntu.com/ubuntu focal InRelease [265 kB]
+...
+
+$ sudo apt install \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release -y
+Instalando dependencias...
+
+$ sudo mkdir -p /etc/apt/keyrings
+
+$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+$ echo \
+  "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+$ sudo apt update
+
+$ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+Instalando Docker...
+
+$ sudo systemctl enable --now docker
+Docker habilitado y ejecutándose
+
+$ docker --version
+Docker version 24.0.5, build abcdef123
+
+# ✔ Docker instalado correctamente
+
+=== FIREFOX INSTALL ===
+# 🌐 INSTALACIÓN DE NAVEGADOR: FIREFOX
+
+$ sudo apt install firefox -y
+Leyendo listas de paquetes...
+Se instalarán los siguientes paquetes:
+  firefox
+
+$ firefox --version
+Mozilla Firefox 115.0.1
+
+# ✔ Firefox instalado correctamente
+
+##############################################
+# Fin de proceso de instalación, memoria será revisada
+##############################################
+
+=====================================================================
 === NETDATA ===
-
 CPU=67%
 RAM=65%
 Disco=82% usado
@@ -79,6 +176,9 @@ CGroup: /system.slice/netdata.service
 ├─2890 /usr/libexec/netdata/plugins.d/apps.plugin 1
 └─2891 bash /usr/libexec/netdata/plugins.d/tc-qos-helper.sh 1
 
+=====================================================================
+
+
 
 =====================================================================
 WARNINGS                                                                                               High memory access latency was detected during the stress test, potentially impacting real-time performance. Investigation required to determine root cause.
@@ -91,27 +191,6 @@ Test Completion Status: FAILED
 
 Logs collected and stored at /var/log/memlat/failed_latency_test_1623900021
 
-
-
-
-
-
-
-
-
-=====================================================================
-WARNINGS                                                                                               overheating detected
-
-Test 1 Complete -  OVERHEATING: System temperature exceeded the safe operational threshold
-
-Test Completion Status: FAILED
-
-=====================================================================
-
-Copying log files result.log and clstrmgr.debug from all nodes to directory /var/log/stressng/failed.1144942311
-
-
-https://phoenixnap.com/kb/linux-cpu-temp
 
 
 
