@@ -14,3 +14,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+function toggleOpciones() {
+        const tipo = document.querySelector('input[name="tipo_reporte"]:checked').value;
+        document.getElementById('opciones_especificas').style.display = (tipo === 'especifico') ? 'block' : 'none';
+}

@@ -1,4 +1,3 @@
-
 from flask import Flask, request, render_template, send_file
 import os
 from reportlab.pdfgen import canvas
@@ -6,10 +5,8 @@ import xml.etree.ElementTree as ET
 from werkzeug.utils import secure_filename
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import KeepTogether
-from reportlab.platypus import PageBreak
 from collections import Counter
 
 app = Flask(__name__)
@@ -24,6 +21,10 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload():
+    # Obtener tipo de reporte y secciones seleccionadas
+    tipo_reporte = request.form.get('tipo_reporte')
+    secciones = request.form.getlist('secciones')
+
     archivo = request.files['archivo']
     if archivo:
         nombre = secure_filename(archivo.filename)
@@ -49,7 +50,8 @@ def upload():
                     netdata_metrica.append([k.strip(), v.strip()])
                 except ValueError:
                     continue
-        
+
+        # Crear diccionario base con claves en minúscula
         raw_data = {}
         path_line = "-"
         for line in contenido:
@@ -76,6 +78,7 @@ def upload():
                         programas.append(partes[idx - 1])
         prog_str = ", ".join(programas) if programas else "-"
 
+        # Programas abiertos
         programas_abiertos = []
         for line in contenido:
             if "OPEN" in line:
@@ -90,7 +93,7 @@ def upload():
         estados = ['SUCCESS', 'FAILED', 'STUCK']
         estado_detectado = next((e for e in estados if any(e in line for line in contenido)), "No detectado")
 
-        # Palabras clave
+        # Mapeo flexible de claves esperadas
         alias_claves = {
             "os_version": ["os_version", "osversion"],
             "ifwi_version": ["ifwi_version", "ifwiversion"],
@@ -117,7 +120,7 @@ def upload():
                     resultados.append({'clave': clave, 'linea': linea.strip()})
                     break
 
-        # PDF Gen
+        # Generación del PDF
         pdf_path = os.path.join(OUTPUT_FOLDER, nombre + '.pdf')
         doc = SimpleDocTemplate(pdf_path, pagesize=A4)
         styles = getSampleStyleSheet()
@@ -126,82 +129,86 @@ def upload():
         flow.append(Paragraph("<b>Reporte detallado</b>", styles['Title']))
         flow.append(Spacer(1, 12))
 
-        flow.append(Paragraph("<b>Información General</b>", styles['Heading2']))
-        flow.append(Paragraph(f"<b>Archivo procesado:</b> {nombre}", styles['Normal']))
-        flow.append(Paragraph(f"<b>Total de líneas analizadas:</b> {len(contenido)}", styles['Normal']))
-        if path_line != "-":
+        incluir = lambda campo: tipo_reporte == "detallado" or campo in secciones
+
+        # Información General
+        if incluir("lineas") or incluir("path") or incluir("instalados"):
+            flow.append(Paragraph("<b>Información General</b>", styles['Heading2']))
+        if incluir("lineas"):
+            flow.append(Paragraph(f"<b>Total de líneas analizadas:</b> {len(contenido)}", styles['Normal']))
+        if incluir("path"):
             flow.append(Paragraph(f"<b>Path del archivo:</b> {path_line}", styles['Normal']))
+        if incluir("instalados"):
             flow.append(Paragraph(f"<b>Program installed:</b> {prog_str}", styles['Normal']))
             flow.append(Paragraph(f"<b>Programas abiertos:</b> {abiertos_str}", styles['Normal']))
         flow.append(Spacer(1, 12))
 
-        flow.append(Paragraph("<b>Resumen de ocurrencias por palabra clave</b>", styles['Heading2']))
-        contador = Counter([r['clave'] for r in resultados])
-        tabla_resumen = Table([["Palabra clave", "Ocurrencias"]] + [[k, str(v)] for k, v in contador.items()])
-        tabla_resumen.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold')
-        ]))
-        flow.append(tabla_resumen)
-        flow.append(Spacer(1, 12))
-
-        flow.append(Paragraph("<b>Detalles de coincidencias encontradas</b>", styles['Heading2']))
-        for r in resultados:
-            flow.append(Paragraph(f"[{r['clave']}] {r['linea']}", styles['Normal']))
-            flow.append(Spacer(1, 4))
-
-        flow.append(Spacer(1, 12))
-        flow.append(Paragraph("<b>Ingredient Information</b>", styles['Heading2']))
-        campos_info = list(alias_claves.keys())
-        tabla_info = [["Campo", "Valor"]] + [[campo, data.get(campo, "-")] for campo in campos_info]
-        tabla = Table(tabla_info)
-        tabla.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-        ]))
-        flow.append(tabla)
-        flow.append(Spacer(1, 12))
-
-        flow.append(Paragraph("<b>Anomalías detectadas</b>", styles['Heading2']))
-        alertas = [line.strip() for line in contenido if 'WARNING' in line or 'overheat' in line or 'latency' in line]
-        if any(path_line in a for a in alertas):
-            alertas = [a for a in alertas if path_line not in a]
-        if alertas:
-            for alerta in alertas:
-                flow.append(Paragraph(alerta, styles['Normal']))
-        else:
-            flow.append(Paragraph("No se detectaron anomalías en el archivo.", styles['Normal']))
-        flow.append(Spacer(1, 12))
-
-        if netdata_metrica:
-            netdata_title = Paragraph("<b>Métricas con Netdata</b>", styles['Heading2'])
-            netdata_tabla = Table([["Métrica", "Valor"]] + netdata_metrica)
-            netdata_tabla.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,0), colors.darkblue),
-                ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-                ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-                ('ALIGN', (0,0), (-1,-1), 'LEFT')
+        # Secciones para reporte detallado únicamente
+        if tipo_reporte == "detallado":
+            flow.append(Paragraph("<b>Resumen de ocurrencias por palabra clave</b>", styles['Heading2']))
+            contador = Counter([r['clave'] for r in resultados])
+            tabla_resumen = Table([["Palabra clave", "Ocurrencias"]] + [[k, str(v)] for k, v in contador.items()])
+            tabla_resumen.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold')
             ]))
+            flow.append(tabla_resumen)
+            flow.append(Spacer(1, 12))
 
-            flow.append(PageBreak())  # forzando 
-            flow.append(netdata_title)
-            flow.append(Spacer(1, 6))
-            flow.append(netdata_tabla)
+            flow.append(Paragraph("<b>Detalles de coincidencias encontradas</b>", styles['Heading2']))
+            for r in resultados:
+                flow.append(Paragraph(f"[{r['clave']}] {r['linea']}", styles['Normal']))
+                flow.append(Spacer(1, 4))
 
-        else:
-            flow.append(Paragraph("<b>Métricas con Netdata</b>", styles['Heading2']))
-            flow.append(Paragraph("No se encontraron métricas Netdata en el archivo.", styles['Normal']))
+            flow.append(Spacer(1, 12))
+            flow.append(Paragraph("<b>Ingredient Information</b>", styles['Heading2']))
+            campos_info = list(alias_claves.keys())
+            tabla_info = [["Campo", "Valor"]] + [[campo, data.get(campo, "-")] for campo in campos_info]
+            tabla = Table(tabla_info)
+            tabla.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+                ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ]))
+            flow.append(tabla)
+            flow.append(Spacer(1, 12))
 
-        #Status Test
+            flow.append(Paragraph("<b>Anomalías detectadas</b>", styles['Heading2']))
+            alertas = [line.strip() for line in contenido if 'WARNING' in line or 'overheat' in line or 'latency' in line]
+            if any(path_line in a for a in alertas):
+                alertas = [a for a in alertas if path_line not in a]
+            if alertas:
+                for alerta in alertas:
+                    flow.append(Paragraph(alerta, styles['Normal']))
+            else:
+                flow.append(Paragraph("No se detectaron anomalías en el archivo.", styles['Normal']))
+            flow.append(Spacer(1, 12))
+
+        # Sección Netdata
+        if incluir("netdata"):
+            netdata_title = Paragraph("<b>Métricas con Netdata</b>", styles['Heading2'])
+            if netdata_metrica:
+                netdata_tabla = Table([["Métrica", "Valor"]] + netdata_metrica)
+                netdata_tabla.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.darkblue),
+                    ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+                    ('ALIGN', (0,0), (-1,-1), 'LEFT')
+                ]))
+                bloque = [netdata_title, Spacer(1, 4), netdata_tabla]
+                if len(netdata_metrica) < 10:
+                    flow.append(KeepTogether(bloque))
+                else:
+                    flow.extend(bloque)
+            else:
+                flow.append(netdata_title)
+                flow.append(Paragraph("No se encontraron métricas Netdata en el archivo.", styles['Normal']))
+
+        # Estado final
         flow.append(Spacer(1, 12))
         flow.append(Paragraph("<b>Test Completion Status</b>", styles['Heading2']))
-
-        # Buscar estado en contenido
-        estados = ['SUCCESS', 'FAILED', 'STUCK']
-        estado_detectado = next((e for e in estados if any(e in line for line in contenido)), "No detectado")
         flow.append(Paragraph(estado_detectado, styles['Normal']))
 
         doc.build(flow)
