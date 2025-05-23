@@ -9,16 +9,22 @@
 </head>
 <body class="bg-light">
 
-  <div class="container mt-5 text-center">
-    <h1 class="text-primary">✅ Procesado con éxito</h1>
-    <p class="text-muted">Tu archivo ha sido analizado correctamente.</p>
-
-    <div class="d-grid gap-2 col-6 mx-auto mt-4">
-      <a href="{{ url_for('descargar_pdf', nombre=nombre + '.pdf') }}" class="btn btn-outline-success">📄 Descargar PDF</a>
-      <a href="{{ url_for('descargar_xml', nombre=nombre + '.xml') }}" class="btn btn-outline-info">📄 Descargar XML</a>
-      <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">🔁 Generar otro reporte</a>
-    </div>
+  {% if error %}
+  <div class="alert alert-danger text-center mt-4">{{ error }}</div>
+  <div class="text-center mt-3">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Regresar</a>
   </div>
+  {% elif nombre %}
+    <div class="container mt-5 text-center">
+      <h1 class="text-primary">✅ Procesado con éxito</h1>
+      <p class="text-muted">Tu archivo ha sido analizado correctamente.</p>
 
+      <div class="d-grid gap-2 col-6 mx-auto mt-4">
+        <a href="{{ url_for('descargar_pdf', nombre=nombre + '.pdf') }}" class="btn btn-outline-success">📄 Descargar PDF</a>
+        <a href="{{ url_for('descargar_xml', nombre=nombre + '.xml') }}" class="btn btn-outline-info">📄 Descargar XML</a>
+        <a href="{{ url_for('index') }}" class="btn btn-primary mt-3">🔁 Generar otro reporte</a>
+      </div>
+    </div>
+  {% endif %}
 </body>
 </html>

@@ -21,13 +21,16 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    # Obtener tipo de reporte y secciones seleccionadas
     tipo_reporte = request.form.get('tipo_reporte')
     secciones = request.form.getlist('secciones')
 
     archivo = request.files['archivo']
     if archivo:
         nombre = secure_filename(archivo.filename)
+        _, extension = os.path.splitext(nombre)
+        if extension.lower() not in ['.txt', '.log']:
+            return render_template('resultado.html', error="Ese formato de archivo no está permitido para convertir con este sistema.", nombre=None)
+
         ruta = os.path.join(UPLOAD_FOLDER, nombre)
         archivo.save(ruta)
 
@@ -51,7 +54,6 @@ def upload():
                 except ValueError:
                     continue
 
-        # Crear diccionario base con claves en minúscula
         raw_data = {}
         path_line = "-"
         for line in contenido:
@@ -67,7 +69,6 @@ def upload():
                 if "/var/" in line:
                     path_line = line[line.index("/var/"):].strip()
 
-        # Programas instalados
         programas = []
         for line in contenido:
             if "INSTALL" in line:
@@ -78,7 +79,6 @@ def upload():
                         programas.append(partes[idx - 1])
         prog_str = ", ".join(programas) if programas else "-"
 
-        # Programas abiertos
         programas_abiertos = []
         for line in contenido:
             if "OPEN" in line:
@@ -89,11 +89,9 @@ def upload():
                         programas_abiertos.append(partes[idx + 1])
         abiertos_str = ", ".join(programas_abiertos) if programas_abiertos else "-"
 
-        # Estados finales
         estados = ['SUCCESS', 'FAILED', 'STUCK']
         estado_detectado = next((e for e in estados if any(e in line for line in contenido)), "No detectado")
 
-        # Mapeo flexible de claves esperadas
         alias_claves = {
             "os_version": ["os_version", "osversion"],
             "ifwi_version": ["ifwi_version", "ifwiversion"],
@@ -120,7 +118,6 @@ def upload():
                     resultados.append({'clave': clave, 'linea': linea.strip()})
                     break
 
-        # Generación del PDF
         pdf_path = os.path.join(OUTPUT_FOLDER, nombre + '.pdf')
         doc = SimpleDocTemplate(pdf_path, pagesize=A4)
         styles = getSampleStyleSheet()
@@ -132,7 +129,6 @@ def upload():
         mostrar_basico = tipo_reporte == "especifico" and len(secciones) == 0
         incluir = lambda campo: tipo_reporte == "detallado" or campo in secciones
 
-        # Información General
         if incluir("lineas") or incluir("path") or incluir("instalados"):
             flow.append(Paragraph("<b>Información General</b>", styles['Heading2']))
         if incluir("lineas"):
@@ -144,7 +140,6 @@ def upload():
             flow.append(Paragraph(f"<b>Programas abiertos:</b> {abiertos_str}", styles['Normal']))
         flow.append(Spacer(1, 12))
 
-        # Secciones mínimas siempre presentes
         if tipo_reporte == "detallado" or tipo_reporte == "especifico":
             flow.append(Paragraph("<b>Resumen de ocurrencias por palabra clave</b>", styles['Heading2']))
             contador = Counter([r['clave'] for r in resultados])
@@ -187,8 +182,6 @@ def upload():
                 flow.append(Paragraph("No se detectaron anomalías en el archivo.", styles['Normal']))
             flow.append(Spacer(1, 12))
 
-
-        # Sección Netdata
         if incluir("netdata"):
             netdata_title = Paragraph("<b>Métricas con Netdata</b>", styles['Heading2'])
             if netdata_metrica:
@@ -208,13 +201,11 @@ def upload():
                 flow.append(netdata_title)
                 flow.append(Paragraph("No se encontraron métricas Netdata en el archivo.", styles['Normal']))
 
-        # Estado final
         flow.append(Spacer(1, 12))
         flow.append(Paragraph("<b>Test Completion Status</b>", styles['Heading2']))
         flow.append(Paragraph(estado_detectado, styles['Normal']))
 
         doc.build(flow)
-
         return render_template('resultado.html', nombre=nombre)
 
 @app.route('/descargar/pdf/<nombre>')
@@ -223,7 +214,7 @@ def descargar_pdf(nombre):
 
 @app.route('/descargar/xml/<nombre>')
 def descargar_xml(nombre):
-    return send_file(os.path.join(OUTPUT_FOLDER, nombre), as_attsachment=True)
+    return send_file(os.path.join(OUTPUT_FOLDER, nombre), as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
