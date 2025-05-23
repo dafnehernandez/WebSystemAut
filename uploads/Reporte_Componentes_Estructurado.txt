@@ -58,7 +58,26 @@ NUMA node0 CPU(s):      0-31
 NUMA node1 CPU(s):      32-63
 Flags:                  fpu vme de pse tsc ... (se omiten por brevedad)
 
+=== NETDATA ===
 
+CPU=67%
+RAM=65%
+Disco=82% usado
+Red (eth0)=Rx: 1.2 MB/s, Tx: 900 KB/s
+
+$sudo systemctl start netdata netdata.service
+
+#Real time performance monitoring
+Loaded: loaded (/lib/systemd/system/netdata.service; enabled; vendor preset: enabled)
+Active: active (running) since Sat 2019-08-17 06:42:04 UTC; 3min 8s ago
+Main PID: 2796 (netdata)
+Tasks: 26 (limit: 1152)
+CGroup: /system.slice/netdata.service
+├─2796 /usr/sbin/netdata -P /var/run/netdata/netdata.pid -D -W set global process scheduling policy keep -W set global OOM score keep
+├─2887 /usr/libexec/netdata/plugins.d/go.d.plugin 1
+├─2889 /usr/bin/python /usr/libexec/netdata/plugins.d/python.d.plugin 1
+├─2890 /usr/libexec/netdata/plugins.d/apps.plugin 1
+└─2891 bash /usr/libexec/netdata/plugins.d/tc-qos-helper.sh 1
 
 
 =====================================================================
@@ -97,30 +116,3 @@ https://phoenixnap.com/kb/linux-cpu-temp
 
 
 
-Report_Component                                                                                      Description
------------------------------------------------------------------------------------------------------- ----------------------------------------------------------------------------------------
-
-Title                                                                                                 Informe de Validación QA - 2024-06-05
-Id                                                                                                    QA_LOG_20240605_002
-Description                                                                                           success memory throughput
-
-Parent_Id                                                                                             BATCH_TEST_202406
-Owner                                                                                                 d.herrera
-Status                                                                                                Close
-Reason                                                                                                success
-Status_reason                                                                                         close.success
-Co_owners                                                                                             m.robles
-Owner_team                                                                                            QA_Automation_Equipo_2
-Details                                                                                               os_version=Ubuntu 22.04; ifwi_version=1.1.0; kernel_version=5.15.0-102-generic; bios_version=FX506LI.315; vm_config=FX506LI-QA2; bmc=03.00.12; memory=Nominal; size=1.1GB; time=37s
-Test_cycle                                                                                            Regression_Test_June_2024
-Free_tag_1                                                                                            CASE_10933
-Free_tag_2                                                                                            -
-
-Os_version                                                                                            Ubuntu 22.04
-Ifwi_version                                                                                           1.1.0
-Kernel_version                                                                                         5.15.0-102-generic
-Bios_version                                                                                           FX506LI.315
-Vm_config                                                                                              FX506LI-QA2
-BMC                                                                                                    3.1.12
-
-Alertas                                                                                               No se detectaron anomalías durante la ejecución

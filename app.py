@@ -1,3 +1,4 @@
+
 from flask import Flask, request, render_template, send_file
 import os
 from reportlab.pdfgen import canvas
@@ -15,7 +16,6 @@ OUTPUT_FOLDER = 'outputs'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -31,6 +31,56 @@ def upload():
         with open(ruta, 'r', encoding='utf-8') as f:
             contenido = f.readlines()
 
+        # Procesar Netdata dinámico desde === NETDATA ===
+        netdata_metrica = []
+        netdata_activa = False
+        for line in contenido:
+            line = line.strip()
+            if "=== NETDATA ===" in line:
+                netdata_activa = True
+                continue
+            if netdata_activa:
+                if line == "" or "=" not in line:
+                    break
+                try:
+                    k, v = line.split("=", 1)
+                    netdata_metrica.append([k.strip(), v.strip()])
+                except ValueError:
+                    continue
+        
+        raw_data = {}
+        path_line = "-"
+        for line in contenido:
+            if "details" in line.lower():
+                parts = line.split("Details", 1)
+                if len(parts) > 1:
+                    valores = parts[1].strip()
+                    for par in valores.split(";"):
+                        if "=" in par:
+                            k, v = par.strip().split("=", 1)
+                            raw_data[k.strip().lower()] = v.strip()
+            if "Logs collected and stored at" in line:
+                if "/var/" in line:
+                    path_line = line[line.index("/var/"):].strip()
+
+        alias_claves = {
+            "os_version": ["os_version", "osversion"],
+            "ifwi_version": ["ifwi_version", "ifwiversion"],
+            "kernel_version": ["kernel_version", "kernelversion"],
+            "bios_version": ["bios_version", "biosversion"],
+            "vm_config": ["vm_config", "vmconfig"],
+            "bmc": ["bmc"]
+        }
+
+        data = {}
+        for clave, variantes in alias_claves.items():
+            for variante in variantes:
+                if variante in raw_data:
+                    data[clave] = raw_data[variante]
+                    break
+            else:
+                data[clave] = "-"
+
         claves = ['ERROR', 'SUCCESS', 'WARNING']
         resultados = []
         for linea in contenido:
@@ -40,59 +90,74 @@ def upload():
                     break
 
         pdf_path = os.path.join(OUTPUT_FOLDER, nombre + '.pdf')
-        c = canvas.Canvas(pdf_path)
-        y = 800
-        for r in resultados:
-            c.drawString(50, y, f"[{r['clave']}] {r['linea']}")
-            y -= 15
-        c.save()
-
-        pdf_path = os.path.join(OUTPUT_FOLDER, nombre + '.pdf')
         doc = SimpleDocTemplate(pdf_path, pagesize=A4)
         styles = getSampleStyleSheet()
         flow = []
 
-        # Título
-        flow.append(Paragraph(f"<b>Reporte de Análisis de Log</b>", styles['Title']))
+        flow.append(Paragraph("<b>Reporte detallado</b>", styles['Title']))
         flow.append(Spacer(1, 12))
 
-        # Información general
+        flow.append(Paragraph("<b>Información General</b>", styles['Heading2']))
         flow.append(Paragraph(f"<b>Archivo procesado:</b> {nombre}", styles['Normal']))
         flow.append(Paragraph(f"<b>Total de líneas analizadas:</b> {len(contenido)}", styles['Normal']))
+        if path_line != "-":
+            flow.append(Paragraph(f"<b>Path del archivo:</b> {path_line}", styles['Normal']))
         flow.append(Spacer(1, 12))
 
-        # Contar ocurrencias
+        flow.append(Paragraph("<b>Resumen de ocurrencias por palabra clave</b>", styles['Heading2']))
         contador = Counter([r['clave'] for r in resultados])
-
-        # Tabla resumen
-        flow.append(Paragraph("<b>Resumen de ocurrencias por palabra clave:</b>", styles['Heading2']))
-        tabla = Table([["Palabra clave", "Ocurrencias"]] + [[k, str(v)] for k, v in contador.items()])
-        tabla.setStyle(TableStyle([
+        tabla_resumen = Table([["Palabra clave", "Ocurrencias"]] + [[k, str(v)] for k, v in contador.items()])
+        tabla_resumen.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold')
         ]))
+        flow.append(tabla_resumen)
+        flow.append(Spacer(1, 12))
+
+        flow.append(Paragraph("<b>Detalles de coincidencias encontradas</b>", styles['Heading2']))
+        for r in resultados:
+            flow.append(Paragraph(f"[{r['clave']}] {r['linea']}", styles['Normal']))
+            flow.append(Spacer(1, 4))
+
+        flow.append(Spacer(1, 12))
+        flow.append(Paragraph("<b>Ingredient Information</b>", styles['Heading2']))
+        campos_info = list(alias_claves.keys())
+        tabla_info = [["Campo", "Valor"]] + [[campo, data.get(campo, "-")] for campo in campos_info]
+        tabla = Table(tabla_info)
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ]))
         flow.append(tabla)
         flow.append(Spacer(1, 12))
 
-        # Detalles línea por línea
-        flow.append(Paragraph("<b>Detalles de coincidencias encontradas:</b>", styles['Heading2']))
-        for r in resultados:
-            line = f"[{r['clave']}] {r['linea']}"
-            flow.append(Paragraph(line, styles['Normal']))
-            flow.append(Spacer(1, 6))
+        flow.append(Paragraph("<b>Anomalías detectadas</b>", styles['Heading2']))
+        alertas = [line.strip() for line in contenido if 'WARNING' in line or 'overheat' in line or 'latency' in line]
+        if any(path_line in a for a in alertas):
+            alertas = [a for a in alertas if path_line not in a]
+        if alertas:
+            for alerta in alertas:
+                flow.append(Paragraph(alerta, styles['Normal']))
+        else:
+            flow.append(Paragraph("No se detectaron anomalías en el archivo.", styles['Normal']))
+        flow.append(Spacer(1, 12))
+        
+        flow.append(Paragraph("<b>Métricas con Netdata</b>", styles['Heading2']))
+        if netdata_metrica:
+            netdata_tabla = Table([["Métrica", "Valor"]] + netdata_metrica)
+            netdata_tabla.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.darkblue),
+                ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ]))
+            flow.append(netdata_tabla)
+        else:
+            flow.append(Paragraph("No se encontraron métricas Netdata en el archivo.", styles['Normal']))
 
         doc.build(flow)
-
-        root = ET.Element("reporte")
-        for r in resultados:
-            entrada = ET.SubElement(root, "entrada")
-            ET.SubElement(entrada, "clave").text = r['clave']
-            ET.SubElement(entrada, "contenido").text = r['linea']
-        xml_path = os.path.join(OUTPUT_FOLDER, nombre + '.xml')
-        ET.ElementTree(root).write(xml_path, encoding='utf-8', xml_declaration=True)
 
         return render_template('resultado.html', nombre=nombre)
 
